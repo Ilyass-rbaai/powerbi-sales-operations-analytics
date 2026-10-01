@@ -1,0 +1,8 @@
+# Local Power BI working files
+*.pbix.autosave
+*.tmp
+~$*
+.pbi/localSettings.json
+.pbi/cache.abf
+Thumbs.db
+Desktop.ini
