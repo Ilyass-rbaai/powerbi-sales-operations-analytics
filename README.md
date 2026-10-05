@@ -1,83 +1,122 @@
 # Sales & Operations Analytics | Power BI
 
-A Power BI portfolio project that brings sales, customers, products, inventory, campaigns, and order processing into a shared analytical model. The report explores sales performance across regions and products, with interactive selections for region, month/year, and category.
+An interactive Power BI portfolio report for exploring sales performance and order-to-payment processing across 2025–2026. Version 2 combines a consistent visual theme with tested filters, KPI calculations, page navigation, and reset buttons.
 
-## Dashboard preview
+## Sales Overview
 
-![Sales overview dashboard](03_my_visual.png)
+![Sales overview](03_SalesOverView_visualisation.png)
 
-## Business questions
+This page compares sales with monthly targets and identifies leading regions and products. Year, customer region, and product category selectors support exploration.
 
-- How much sales revenue is recorded, and how many orders contribute to it?
-- Which regions and products contribute the most sales?
-- How does sales performance vary across reporting months and years?
-- How many customers are active, and what is the average time from order to payment?
+| KPI | Overview value | Definition |
+| --- | --- | --- |
+| Total Sales | 526,643.91 | Sum of sales line totals |
+| Total Orders | 80 | Distinct order IDs in the sales table |
+| Active Customers | 47 | Value displayed by the report's active-customer measure |
+| Sales Target Achievement | 95.4% | Sales divided by targets totaling 552,000 |
+| Average Order Value | 6,583 | Sales divided by distinct orders, rounded for display |
 
-## Project scope
+Europe leads the displayed regional sales comparison at approximately 130K. Team M047 leads product sales at approximately 32K. Currency is not specified in the screenshots.
 
-The source workbook contains 23 worksheets spanning orders for 2025 and 2026, customer and product reference data, invoices, payments, shipments, inventory, campaign activity, exchange rates, sales targets, and regional security mappings.
+Targets are global monthly figures, not regional or category allocations. Target achievement and the target line are intentionally hidden when customer region or product category is filtered. Missing monthly values remain blank rather than being replaced with invented zero values.
 
-The Power BI model organizes these sources into sales, inventory, campaign, order-process, and target fact tables, supported by customer, product, city, date, campaign, and order-flag dimensions. A dedicated measures table groups the report's KPI calculations.
+## Orders & Payments
 
-**Tools:** Power BI Desktop, Power Query, DAX, and Excel source data.
+![Order and payment overview](04_orders%26payments_visual.png)
 
-## Data modeling
+The page groups orders by their order month and allows filtering by year, customer region, and payment-date status. A detail table exposes order, invoice, and payment dates alongside the recorded delay.
 
-### Before modeling
+| KPI | Overview value | Interpretation |
+| --- | --- | --- |
+| Process Orders | 80 | Distinct orders in the process table |
+| Payment Recorded | 60 | Orders with a payment date |
+| No Payment Recorded | 20 | Orders without a payment date |
+| Payment Recorded % | 75.0% | Orders with a payment date divided by process orders |
+| Average Payment Days | 32.8 | Average order-to-payment delay for rows with both dates |
 
-![Model before modeling](01_my_data_model_before_modeling.png)
+Payment recorded means a payment date is present. It does not establish full settlement. A missing payment date does not establish overdue status. The average-delay tooltip includes the number of orders with payment recorded to help interpret small monthly samples.
 
-### Analytical model
+### Investigating orders without a payment date
 
-![Fact and dimension model with relationships](02_my_data_model_after_data_modeling.png)
+![Orders without payment recorded](05_orders_without_payment.png)
 
-The model separates descriptive attributes from transactional data and includes relationships between fact and dimension tables. It also contains a regional security mapping table. Its presence alone does not establish that row-level security has been configured or tested.
+Selecting this status exposes 20 orders in the overview dataset. The delay average remains unavailable because these orders have no payment date. Count measures display zero when no matching orders exist.
 
-## Report features
+## Data and model
 
-- KPI cards for total sales, total orders, active customers, and average order-to-payment time.
-- Sales comparisons by region and product.
-- Sales grouped by month and year.
-- Interactive region, date, and category selections.
+The Excel source contains 23 worksheets covering orders, customers, products, invoices, payments, shipments, inventory, marketing campaigns, exchange rates, sales targets, and security mappings.
 
-![Dashboard with a selection applied](04_my_visual_filtred.png)
+The analytical model includes fact tables for sales, inventory, campaigns, order processing, and targets; dimensions for customer, product, city, date, campaigns, and order flags; and a dedicated measures table.
 
-The selected view illustrates how selections change KPI values and highlight portions of the sales charts.
+![Initial model](01_my_data_model_before_modeling.png)
 
-## Snapshot observations
+![Model screenshot from the initial project](02_my_data_model_after_data_modeling.png)
 
-In the overview screenshot, the report displays approximately **527K in sales**, **80 orders**, and **47 active customers**. The average order-to-payment card displays **32.84**; its unit and treatment of unpaid orders should be checked against the measure definition before interpreting it as a business KPI.
+The model images document the original modeling work. Version 2 additionally uses a date-only order column for the active relationship between the calendar and order processing, preserving original timestamps. The calendar filters monthly targets through an active, single-direction relationship. The security mapping table is present; configured and tested row-level security is not claimed.
 
-Europe has the largest displayed regional sales total, at approximately **130K**. Team M047 has the largest displayed product sales total, at approximately **32K**. These observations describe the saved screenshot and may change with filters or refreshed data. No currency is assumed because the screenshot does not identify one.
+## Selected DAX calculations
+
+```dax
+Average Order Value =
+DIVIDE([total_sales], [total_orders])
+
+Payment Recorded % =
+DIVIDE([Paid Orders], [Process Orders])
+
+Sales Target Overview =
+IF(
+    ISFILTERED(dim_customer[region])
+        || ISFILTERED(dim_product[category]),
+    BLANK(),
+    [Sales Target]
+)
+```
+
+Order-to-payment days use `DATEDIFF` in days, returning blank when either date is missing. The average ignores those blanks. Order counts use distinct order IDs; payment-status counts use `COALESCE` to display zero for an empty matching set.
+
+## Validation performed during development
+
+- Reconciled the displayed sales and target totals with a monthly validation table.
+- Verified yearly and regional filters on the order KPIs.
+- Checked 2025 totals: 40 orders, 27 with payment recorded, 13 without, and a 67.5% recorded-payment rate.
+- Verified that the two payment-status groups reconcile to all 80 process orders.
+- Tested status selections, unavailable averages, monthly chart interactions, and both reset buttons.
+- Confirmed that clicking a stacked segment selects its month; the separate status selector narrows the payment-date status.
+- Tested page navigation and retained a hidden Validation page for development checks.
+
+These checks are focused report checks, not a comprehensive audit of the entire source dataset or all model relationships.
+
+## Open the report
+
+1. Download or clone this repository.
+2. Open **my_powerBI_end_to_end_project_v2.pbix** in Power BI Desktop.
+3. Start on Sales Overview and navigate to Orders & Payments.
+4. Use the filters and Reset Filters button. In Desktop edit mode, use Ctrl + click to activate navigation and reset buttons.
+5. To refresh, update the Excel source location to your local `dataset.xlsx` in Data source settings, or in a query's Source step if its path is hardcoded.
+
+The original `my_powerBI_end_to_end_project.pbix` is retained as version 1. Screenshots allow visitors to preview version 2 without Power BI Desktop.
 
 ## Repository contents
 
 | File | Purpose |
 | --- | --- |
-| `my_powerBI_end_to_end_project.pbix` | Power BI report and embedded analytical model |
-| `dataset.xlsx` | Source workbook |
+| `my_powerBI_end_to_end_project_v2.pbix` | Current two-page report and hidden Validation page |
+| `my_powerBI_end_to_end_project.pbix` | Original report |
+| `dataset.xlsx` | Excel source data |
+| `03_SalesOverView_visualisation.png` | Version 2 sales overview |
+| `04_orders&payments_visual.png` | Version 2 order and payment overview |
+| `05_orders_without_payment.png` | Filtered investigation example |
 | `01_my_data_model_before_modeling.png` | Initial model screenshot |
-| `02_my_data_model_after_data_modeling.png` | Analytical model screenshot |
-| `03_my_visual.png` | Overview dashboard screenshot |
-| `04_my_visual_filtred.png` | Dashboard with a selection applied |
+| `02_my_data_model_after_data_modeling.png` | Original analytical model screenshot |
 
-## Open the project
+## Limitations and next improvements
 
-1. Download or clone this repository.
-2. Open `my_powerBI_end_to_end_project.pbix` in Power BI Desktop.
-3. Explore the saved report using its interactive selections.
-4. To refresh the data, update the Excel source path to your local `dataset.xlsx` through **Transform data → Data source settings → Change Source**, then apply changes and refresh. If a query contains a hardcoded path, update that query's Source step as well.
-
-The screenshots provide a preview without requiring Power BI Desktop.
-
-## Current limitations and next improvements
-
-- The sales-by-month/year screenshot is sorted by sales amount. Sort by a chronological Year–Month key before using the chart to interpret changes over time.
-- Improve displayed KPI and chart labels, including spelling and consistent units.
-- Add an actual-versus-target chart and a target-achievement measure.
-- Validate relationship behavior, KPI calculations, unpaid-order handling, and security roles before relying on the report for operational decisions.
-- Confirm the source data's provenance and permission for public redistribution before publishing the workbook and embedded report data.
+- Confirm source provenance, currency, and permission for redistribution; synthetic-data provenance has not been established here.
+- Payment dates can extend beyond the current date. The report describes recorded dataset values rather than a verified live collection status.
+- Customer-region filtering and sales-by-city-region grouping represent different geography roles; label and reconcile these roles before drawing detailed regional conclusions.
+- Add tested profitability metrics once the cost grain and discount treatment are confirmed.
+- Validate security roles before presenting row-level security as a completed feature.
 
 ## Skills demonstrated
 
-Multi-table data integration, fact and dimension modeling, relationship design, DAX KPI reporting, interactive report exploration, and visual documentation of a Power BI project.
+Fact and dimension modeling, date relationship troubleshooting, DAX measures, KPI validation, interactive filtering, bookmarks, navigation, missing-data handling, and visual report design.
